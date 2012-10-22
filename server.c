@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "3508"
+#define PORTNO "3526"
 #define MAXDATASIZE 1024
 
 void sigchld_handler(int s){
@@ -33,6 +33,15 @@ int addClientToPeer(char *hostname){
     peernode *temp = (peernode *)malloc(sizeof(peernode));
 	temp->hostname = hostname;
 	insertFrontPeerList(temp);
+}
+
+int addRFCDetail(int rfcid,char* rfctitle, char *hostname){
+    
+    rfcdetailnode *temp1 = (rfcdetailnode *)malloc(sizeof(rfcdetailnode));
+	temp1->rfcno =rfcid;
+	temp1->rfctitle = rfctitle;
+	temp1->hostname = hostname;
+	insertFrontrfcList(temp1);
 }
 
 int main(int argc,char *argv[]){
@@ -101,6 +110,8 @@ int main(int argc,char *argv[]){
             
             char buf[MAXDATASIZE]="";
             char command[256]="";
+            char hostname[256]="";
+            char *rfctitle = (char *)malloc(sizeof(256));
             
             while (1) {
                 
@@ -120,11 +131,11 @@ int main(int argc,char *argv[]){
                 //If initial message add the client to the peer list
                 if(initFlag == 0){
                     char *ch;
-                    char field[256],field1[256];
+                    char field[256];
                     ch = strstr(buf,"Host:");
-                    sscanf(ch,"%[^' '] %[^\n]",field,field1);
+                    sscanf(ch,"%[^' '] %[^\n]",field,hostname);
                     //printf("Substring =>%s,%s\n",field,field1);
-                    addClientToPeer(field1);
+                    addClientToPeer(hostname);
                     initFlag++;
                 }
                 
@@ -133,6 +144,20 @@ int main(int argc,char *argv[]){
                 printf("%s\n",command);
                 if(strncmp(command,buf,3) == 0){
                     printf("ADD method call\n");
+                    //Add rfc detail to the rfc detail list
+                    //RFCID
+                    char *ch;
+                    char field[256],field1[256];
+                    int rfcid;
+                    ch = strstr(buf,"ADD");
+                    printf("%s\n",ch);
+                    sscanf(ch,"%s %s %d",field,field1,&rfcid);
+                    
+                    //RFCTITLE
+                    ch = strstr(buf,"Title:");
+                    sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
+                    
+                    addRFCDetail(rfcid,rfctitle,hostname);
                 }
                 
                 //printf("%s",buf);

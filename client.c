@@ -92,7 +92,7 @@ int initClient(int sockfd){
         perror("Rfc index not found");
         exit(-1);
     }
-    printf("I have the below Rfc's\n");
+    
     while(fscanf(fp,"%d %[^\t\n]",&id,title) == 2){
         //Send add requests to the server
         reqHeader(sockfd,ADD,id,title);
@@ -112,7 +112,7 @@ void *get_in_addr(struct sockaddr *sa){
 
 int main(int argc,char *argv[]){
 
-	char* PORTNO = "3508";
+	char* PORTNO = "3526";
 	char* SERVERIP = "127.0.0.1";
 
     //Populate the OS name
