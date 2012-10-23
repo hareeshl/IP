@@ -13,46 +13,45 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5530"
-#define MAXDATASIZE 1024
+#define PORTNO "5535"
+#define MAXDATASIZE 1025
 
-void sigchld_handler(int s){
-	printf("Signal handler\n");
-	while(waitpid(-1,NULL,WNOHANG) > 0);
-}
+char* command;
+char* hostname;
+char* rfctitle;
+char* buf;
 
 void *get_in_addr(struct sockaddr *sa){
 	if(sa->sa_family == AF_INET){
 		return &(((struct sockaddr_in*)sa)->sin_addr);
     }
-
+    
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int addClientToPeer(char *hostname){
-    peernode *temp = (peernode *)malloc(sizeof(peernode));
-	temp->hostname = hostname;
+void addClientToPeer(char* hostname){
+    peernode *temp = (struct peernode *)malloc(sizeof(peernode));
+	temp->hostname=hostname;
 	insertFrontPeerList(temp);
 }
 
-int addRFCDetail(int rfcid,char* rfctitle, char *hostname){
+void addRFCDetail(int rfcid,char* rfctitle, char *hostname){
     
-    rfcdetailnode *temp1 = (rfcdetailnode *)malloc(sizeof(rfcdetailnode));
+    rfcdetailnode *temp1 = (struct rfcdetailnode *)malloc(sizeof(rfcdetailnode));
 	temp1->rfcno =rfcid;
-	temp1->rfctitle = rfctitle;
-	temp1->hostname = hostname;
+	temp1->rfctitle=rfctitle;
+	temp1->hostname=hostname;
 	insertFrontrfcList(temp1);
 }
 
 int main(int argc,char *argv[]){
-
+    
 	int status,sockfd,newfd,numbytes;
 	struct addrinfo hints,*res;
 	struct sockaddr_in connector_addr;
 	socklen_t addr_size;
 	int yes=1;
 	char s[INET6_ADDRSTRLEN];
-	struct sigaction sa;
     int i;
     
     fd_set master;
@@ -104,6 +103,7 @@ int main(int argc,char *argv[]){
         for(i=0;i<=fdmax;i++){
             if(FD_ISSET(i,&read_fds)){
                 if(i == sockfd){
+                    
                     //New connection
                     printf("New connection\n");
                     addr_size = sizeof(connector_addr);
@@ -119,18 +119,18 @@ int main(int argc,char *argv[]){
                         }
                         
                         struct hostent *client = gethostbyaddr((char *)&connector_addr.sin_addr,sizeof(connector_addr.sin_addr),connector_addr.sin_family);
+                        //printf("Server : got connection from %s \n",client->h_name);
                         
-                        printf("Server : got connection from %s \n",client->h_name);
-
                     }
                 }else{
                     //Handle data from client
                     int initFlag = 0;
                     
-                    char buf[MAXDATASIZE]="";
-                    char command[256]="";
-                    char hostname[256]="";
-                    char *rfctitle = (char *)malloc(sizeof(256));
+                    buf=(char *)malloc(MAXDATASIZE);
+                    command=(char *)malloc(256);
+                    rfctitle=(char *)malloc(256);
+                    
+                    int rfcid;
                     
                     //Add RFC list
                     numbytes = recv(i,buf,MAXDATASIZE-1,0);
@@ -150,15 +150,13 @@ int main(int argc,char *argv[]){
                     buf[numbytes] = '\0';
                     
                     //If initial message add the client to the peer list
-                    if(initFlag == 0){
-                        char *ch;
-                        char field[256];
-                        ch = strstr(buf,"Host:");
-                        sscanf(ch,"%[^' '] %[^\n]",field,hostname);
-                        //printf("Substring =>%s,%s\n",field,field1);
-                        addClientToPeer(hostname);
-                        initFlag++;
-                    }
+                    char *ch;
+                    char field[256];
+                    ch = strstr(buf,"Host:");
+                    hostname=(char *)malloc(256);
+                    memset(hostname,'\0',strlen(hostname));
+                    sscanf(ch,"%[^' '] %[^\n]",field,hostname);
+                    addClientToPeer(hostname);
                     
                     //Check if method ADD
                     strncpy(command,buf,3);
@@ -169,12 +167,12 @@ int main(int argc,char *argv[]){
                         //RFCID
                         char *ch;
                         char field[256],field1[256];
-                        int rfcid;
                         ch = strstr(buf,"ADD");
                         printf("%s\n",ch);
                         sscanf(ch,"%s %s %d",field,field1,&rfcid);
                         
                         //RFCTITLE
+                        memset(rfctitle,'\0',strlen(rfctitle));
                         ch = strstr(buf,"Title:");
                         sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
                         
@@ -183,7 +181,7 @@ int main(int argc,char *argv[]){
                     
                     //printf("%s",buf);
                     printAll();
-
+                    
                 }
             }
         }

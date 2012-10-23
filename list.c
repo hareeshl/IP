@@ -46,13 +46,16 @@ void printAll(){
 /*int main(){
 	printf("List test\n");
 	
-	peernode *temp = (peernode *)malloc(sizeof(peernode));
-	temp->hostname = "sys1";
-	insertFrontPeerList(temp);
-	
-	peernode *temp2 = (peernode *)malloc(sizeof(peernode));
-	temp2->hostname = "sys2";
-	insertFrontPeerList(temp2);
+    char hstname[256]="sys1";
+	peernode temp;
+	strcpy(temp.hostname,hstname);
+	insertFrontPeerList(&temp);
+    
+	char hstname1[256]="sys2";
+	peernode temp2;
+	strcpy(temp2.hostname,hstname1);
+	insertFrontPeerList(&temp2);
+
 	
 	rfcdetailnode *temp1 = malloc(sizeof(rfcdetailnode));
 	temp1->rfcno =1;

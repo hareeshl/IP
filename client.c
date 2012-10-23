@@ -112,7 +112,7 @@ void *get_in_addr(struct sockaddr *sa){
 
 int main(int argc,char *argv[]){
 
-	char* PORTNO = "3526";
+	char* PORTNO = "5535";
 	char* SERVERIP = "127.0.0.1";
 
     //Populate the OS name
