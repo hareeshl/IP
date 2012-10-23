@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "3526"
+#define PORTNO "5530"
 #define MAXDATASIZE 1024
 
 void sigchld_handler(int s){
@@ -53,6 +53,14 @@ int main(int argc,char *argv[]){
 	int yes=1;
 	char s[INET6_ADDRSTRLEN];
 	struct sigaction sa;
+    int i;
+    
+    fd_set master;
+    fd_set read_fds;
+    int fdmax;
+    
+    FD_ZERO(&master);
+    FD_ZERO(&read_fds);
 	
 	memset(&hints,0,sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -80,94 +88,105 @@ int main(int argc,char *argv[]){
 		exit(1);
 	}
 	
-	sa.sa_handler = sigchld_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if(sigaction(SIGCHLD, &sa, NULL) == -1){
-		perror("sigaction");
-		exit(1);
-	}
-	
 	printf("Server started\n");
+    
+    FD_SET(sockfd,&master);
+    fdmax = sockfd;
 	
 	while(1){
-		addr_size = sizeof(connector_addr);
-		newfd = accept(sockfd,(struct sockaddr *)&connector_addr,&addr_size);
-		
-		if(newfd == -1){
-			perror("Accept");
-			continue;
-		}
         
-        struct hostent *client = gethostbyaddr((char *)&connector_addr.sin_addr,sizeof(connector_addr.sin_addr),connector_addr.sin_family);
-		
-		printf("Server : got connection from %s \n",client->h_name);
-		
-		if(!fork()){
-			close(sockfd);
-            
-            int initFlag = 0;
-            
-            char buf[MAXDATASIZE]="";
-            char command[256]="";
-            char hostname[256]="";
-            char *rfctitle = (char *)malloc(sizeof(256));
-            
-            while (1) {
-                
-                //Add RFC list
-                numbytes = recv(newfd,buf,MAXDATASIZE-1,0);
-	
-                if(numbytes == -1){
-                    perror("Receive");
-                    exit(1);
-                }else if(numbytes == 0){
-                    printf("Connection closed: Exiting\n");
-                    break;
-                }
-                
-                buf[numbytes] = '\0';
-                
-                //If initial message add the client to the peer list
-                if(initFlag == 0){
-                    char *ch;
-                    char field[256];
-                    ch = strstr(buf,"Host:");
-                    sscanf(ch,"%[^' '] %[^\n]",field,hostname);
-                    //printf("Substring =>%s,%s\n",field,field1);
-                    addClientToPeer(hostname);
-                    initFlag++;
-                }
-                
-                //Check if method ADD
-                strncpy(command,buf,3);
-                printf("%s\n",command);
-                if(strncmp(command,buf,3) == 0){
-                    printf("ADD method call\n");
-                    //Add rfc detail to the rfc detail list
-                    //RFCID
-                    char *ch;
-                    char field[256],field1[256];
-                    int rfcid;
-                    ch = strstr(buf,"ADD");
-                    printf("%s\n",ch);
-                    sscanf(ch,"%s %s %d",field,field1,&rfcid);
+        read_fds = master;
+        if(select(fdmax+1,&read_fds,NULL,NULL,NULL) == -1){
+            perror("select");
+            exit(4);
+        }
+        
+        for(i=0;i<=fdmax;i++){
+            if(FD_ISSET(i,&read_fds)){
+                if(i == sockfd){
+                    //New connection
+                    printf("New connection\n");
+                    addr_size = sizeof(connector_addr);
+                    newfd = accept(sockfd,(struct sockaddr *)&connector_addr,&addr_size);
                     
-                    //RFCTITLE
-                    ch = strstr(buf,"Title:");
-                    sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
+                    if(newfd == -1){
+                        perror("Accept");
+                        continue;
+                    }else{
+                        FD_SET(newfd,&master);
+                        if(newfd > fdmax){
+                            fdmax = newfd;
+                        }
+                        
+                        struct hostent *client = gethostbyaddr((char *)&connector_addr.sin_addr,sizeof(connector_addr.sin_addr),connector_addr.sin_family);
+                        
+                        printf("Server : got connection from %s \n",client->h_name);
+
+                    }
+                }else{
+                    //Handle data from client
+                    int initFlag = 0;
                     
-                    addRFCDetail(rfcid,rfctitle,hostname);
+                    char buf[MAXDATASIZE]="";
+                    char command[256]="";
+                    char hostname[256]="";
+                    char *rfctitle = (char *)malloc(sizeof(256));
+                    
+                    //Add RFC list
+                    numbytes = recv(i,buf,MAXDATASIZE-1,0);
+                    
+                    if(numbytes == -1){
+                        perror("Receive");
+                        close(i);
+                        FD_CLR(i,&master);
+                        continue;
+                    }else if(numbytes == 0){
+                        printf("Connection closed: Exiting\n");
+                        close(i);
+                        FD_CLR(i,&master);
+                        continue;
+                    }
+                    
+                    buf[numbytes] = '\0';
+                    
+                    //If initial message add the client to the peer list
+                    if(initFlag == 0){
+                        char *ch;
+                        char field[256];
+                        ch = strstr(buf,"Host:");
+                        sscanf(ch,"%[^' '] %[^\n]",field,hostname);
+                        //printf("Substring =>%s,%s\n",field,field1);
+                        addClientToPeer(hostname);
+                        initFlag++;
+                    }
+                    
+                    //Check if method ADD
+                    strncpy(command,buf,3);
+                    printf("%s\n",command);
+                    if(strncmp(command,buf,3) == 0){
+                        printf("ADD method call\n");
+                        //Add rfc detail to the rfc detail list
+                        //RFCID
+                        char *ch;
+                        char field[256],field1[256];
+                        int rfcid;
+                        ch = strstr(buf,"ADD");
+                        printf("%s\n",ch);
+                        sscanf(ch,"%s %s %d",field,field1,&rfcid);
+                        
+                        //RFCTITLE
+                        ch = strstr(buf,"Title:");
+                        sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
+                        
+                        addRFCDetail(rfcid,rfctitle,hostname);
+                    }
+                    
+                    //printf("%s",buf);
+                    printAll();
+
                 }
-                
-                //printf("%s",buf);
-                printAll();
-            
             }
-            close(newfd);
-            exit(0);
-		}
-		close(newfd);	
+        }
 	}
 	
 	return 0;
