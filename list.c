@@ -29,7 +29,7 @@ void printAll(){
 	peernode* temp = peershead;
 	printf("Peers : ");
 	while(temp != NULL){
-		printf("%s\t",temp->hostname);
+		printf("%s:%d\t",temp->hostname,temp->uploadportno);
 		temp = temp->next;
 	}
 	printf("\n");
@@ -43,19 +43,34 @@ void printAll(){
 	printf("\n");
 }
 
+bool isHostAvailable(char *hostname){
+    
+    peernode* temp = peershead;
+    
+    while(temp != NULL){
+        if(strcmp(temp->hostname,hostname) == 0)
+            return true;
+        temp = temp->next;
+    }
+    
+    return false;
+}
+
 /*int main(){
 	printf("List test\n");
 	
-    char hstname[256]="sys1";
-	peernode temp;
-	strcpy(temp.hostname,hstname);
-	insertFrontPeerList(&temp);
+	peernode *temp = malloc(sizeof(peernode));
+	temp->hostname="sys1";
+	insertFrontPeerList(temp);
     
-	char hstname1[256]="sys2";
-	peernode temp2;
-	strcpy(temp2.hostname,hstname1);
-	insertFrontPeerList(&temp2);
+	peernode *temp2= malloc(sizeof(peernode));
+	temp2->hostname="sys2";		
+	insertFrontPeerList(temp2);
 
+    
+    printf("ishostavailable :%s\n",(isHostAvailable("sys1"))?"true":"false");
+    printf("ishostavailable :%s\n",(isHostAvailable("sys2"))?"true":"false");
+    printf("ishostavailable :%s\n",(isHostAvailable("sys3"))?"true":"false");
 	
 	rfcdetailnode *temp1 = malloc(sizeof(rfcdetailnode));
 	temp1->rfcno =1;

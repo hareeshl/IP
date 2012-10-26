@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5535"
+#define PORTNO "5538"
 #define MAXDATASIZE 1025
 
 char* command;
@@ -29,9 +29,10 @@ void *get_in_addr(struct sockaddr *sa){
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void addClientToPeer(char* hostname){
+void addClientToPeer(char* hostname,int portno){
     peernode *temp = (struct peernode *)malloc(sizeof(peernode));
 	temp->hostname=hostname;
+    temp->uploadportno=portno;
 	insertFrontPeerList(temp);
 }
 
@@ -42,6 +43,12 @@ void addRFCDetail(int rfcid,char* rfctitle, char *hostname){
 	temp1->rfctitle=rfctitle;
 	temp1->hostname=hostname;
 	insertFrontrfcList(temp1);
+}
+
+char* generateResponseHeader(){
+    char* temp;
+    temp= "P2P-CI/1.0 200 OK\n";
+    return temp;
 }
 
 int main(int argc,char *argv[]){
@@ -127,10 +134,10 @@ int main(int argc,char *argv[]){
                     int initFlag = 0;
                     
                     buf=(char *)malloc(MAXDATASIZE);
-                    command=(char *)malloc(256);
+                    command=(char *)malloc(10);
                     rfctitle=(char *)malloc(256);
                     
-                    int rfcid;
+                    int rfcid,uploadportno;
                     
                     //Add RFC list
                     numbytes = recv(i,buf,MAXDATASIZE-1,0);
@@ -156,32 +163,68 @@ int main(int argc,char *argv[]){
                     hostname=(char *)malloc(256);
                     memset(hostname,'\0',strlen(hostname));
                     sscanf(ch,"%[^' '] %[^\n]",field,hostname);
-                    addClientToPeer(hostname);
                     
-                    //Check if method ADD
                     strncpy(command,buf,3);
-                    printf("%s\n",command);
-                    if(strncmp(command,buf,3) == 0){
+                                
+                    //Check if method ADD
+                    if(strncmp(command,"ADD",3) == 0){
+                   
+                        //Upload port no
+                        ch = strstr(buf,"Port:");
+                        sscanf(ch,"%s %d",field,&uploadportno);
+                        
+                        //Add host if unavailable
+                        if(!isHostAvailable(hostname))
+                            addClientToPeer(hostname,uploadportno);
+                        
                         printf("ADD method call\n");
-                        //Add rfc detail to the rfc detail list
-                        //RFCID
+                        //Add rfc detail to the rfc detail list,rfcid
                         char *ch;
                         char field[256],field1[256];
                         ch = strstr(buf,"ADD");
                         printf("%s\n",ch);
                         sscanf(ch,"%s %s %d",field,field1,&rfcid);
                         
-                        //RFCTITLE
+                        //rfctitle
                         memset(rfctitle,'\0',strlen(rfctitle));
                         ch = strstr(buf,"Title:");
                         sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
                         
                         addRFCDetail(rfcid,rfctitle,hostname);
+                        
+                        //Reply back to the client
+                        char response[2048]="";
+                        char *temp = "P2P-CI/1.0 200 OK\nRFC ";
+                        strcat(response,temp);
+                        char rfcid_string[32];
+                        sprintf(rfcid_string,"%d",rfcid);
+                        strcat(response,rfcid_string);
+                        strcat(response," ");
+                        strcat(response,rfctitle);
+                        strcat(response," ");
+                        strcat(response,hostname);
+                        char port_string[32];
+                        sprintf(port_string,"%d",uploadportno);
+                        strcat(response,port_string);
+                        send(i,response,strlen(response),0);
+                        
+                        printf("Add request response completed\n");
+                        
                     }
                     
-                    //printf("%s",buf);
-                    printAll();
+                    strncpy(command,buf,6);
                     
+                    //Check if method GET
+                    if(strncmp(command,"LOOKUP",3) == 0){
+                        printf("LOOKUP CALL\n");
+                        char *responseheader = generateResponseHeader();
+                        printf("Lookup response : %s\n",responseheader);
+                        
+                    }
+                    
+                    printAll();
+                    free(buf);
+                    free(command);
                 }
             }
         }

@@ -12,7 +12,7 @@
 #include<netinet/in.h>
 #include<sys/utsname.h>
 
-#define MAXDATASIZE 100
+#define MAXDATASIZE 1025
 #define GET 0
 #define ADD 1
 #define LOOKUP 2
@@ -49,9 +49,25 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title){
         
 	}else if(option == LOOKUP){
         
-		temp = "LOOKUP RFC 123 P2P-CI/1.0\nHost: thishost.csc.ncsu.edu\
-		\nPort: 5678\nTitle: A Proferred Official ICP\0";
+		temp = "LOOKUP RFC ";
+        char rfcid_string[32];
+        sprintf(rfcid_string,"%d",rfcid);
         
+        char port_string[32];
+        sprintf(port_string,"%d",UPLOADPORT);
+        
+        strcat(fulltext,temp);
+        strcat(fulltext,rfcid_string);
+        strcat(fulltext," P2P-CI/1.0\nHost: ");
+        strcat(fulltext,hostname);
+        strcat(fulltext,"\nPort: ");
+        strcat(fulltext,port_string);
+        strcat(fulltext,"\nTitle: ");
+        strcat(fulltext,title);
+        strcat(fulltext,"\0");
+       
+        printf("Sending %s\n",fulltext);
+ 
 	}else if(option == LISTALL){
         
 		temp = "LIST ALL P2P-CI/1.0\nHost: thishost.csc.ncsu.edu\
@@ -59,11 +75,16 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title){
         
 	}else if(option == GET){
         
-        temp = "GET RFC 1234 P2P-CI/1.0\
-        \nHost: somehost.csc.ncsu.edu\
-        \nOS: ";
+        temp = "GET RFC ";
+        
+        char rfcid_string[32];
+        sprintf(rfcid_string,"%d",rfcid);
         
         strcat(fulltext,temp);
+        strcat(fulltext,rfcid_string);
+        strcat(fulltext," P2P-CI/1.0\nHost: ");
+        strcat(fulltext,hostname);
+        strcat(fulltext,"\nOS: ");
         strcat(fulltext,sysname.sysname);
         strcat(fulltext," ");
         strcat(fulltext,sysname.release);
@@ -84,8 +105,9 @@ int initClient(int sockfd){
     printf("Initializing client\n");
     
     FILE *fp;
-    int id;
+    int id,numbytes;
     char title[256];
+    char* buf;
     
     fp = fopen("index.txt","r");
     if(fp == NULL){
@@ -96,6 +118,11 @@ int initClient(int sockfd){
     while(fscanf(fp,"%d %[^\t\n]",&id,title) == 2){
         //Send add requests to the server
         reqHeader(sockfd,ADD,id,title);
+        buf=(char *)malloc(MAXDATASIZE);
+        numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
+        buf[numbytes] = '\0';
+        
+        printf("Response from server : %s\n",buf);
     }
     
     fclose(fp);
@@ -110,9 +137,19 @@ void *get_in_addr(struct sockaddr *sa){
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+int sendGet(int sockfd,int rfcid){
+    printf("Get request for : %d\n",rfcid);
+    reqHeader(sockfd,GET,rfcid,NULL);
+    
+}
+
+int sendLookup(){
+    
+}
+
 int main(int argc,char *argv[]){
 
-	char* PORTNO = "5535";
+	char* PORTNO = "5538";
 	char* SERVERIP = "127.0.0.1";
 
     //Populate the OS name
@@ -155,23 +192,9 @@ int main(int argc,char *argv[]){
 
     initClient(sockfd);
     
-	/*buf=reqHeader(sockfd,ADD,NULL,NULL);
-	
-	printf("Client sent %s:%d\n",buf,strlen(buf));
-	
-	buf=reqHeader(sockfd,LOOKUP,NULL,NULL);
-	
-    printf("Client sent %s:%d\n",buf,strlen(buf));
+    //sendGet(sockfd,789);
     
-	buf=reqHeader(sockfd,LISTALL,NULL,NULL);
-	
-	printf("Client sent %s:%d\n",buf,strlen(buf));
-	
-	buf = reqHeader(sockfd,GET,NULL,NULL);
+	close(sockfd);
     
-    printf("Client sent %s:%d\n",buf,strlen(buf));*/
-    
-	//close(sockfd);
-
 	return 0;
 }
