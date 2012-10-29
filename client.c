@@ -62,16 +62,26 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title){
         strcat(fulltext,hostname);
         strcat(fulltext,"\nPort: ");
         strcat(fulltext,port_string);
-        strcat(fulltext,"\nTitle: ");
-        strcat(fulltext,title);
         strcat(fulltext,"\0");
        
         printf("Sending %s\n",fulltext);
  
 	}else if(option == LISTALL){
         
-		temp = "LIST ALL P2P-CI/1.0\nHost: thishost.csc.ncsu.edu\
-		\nPort: 5678\0";
+        temp = "LIST ALL ";
+        
+        char port_string[32];
+        sprintf(port_string,"%d",UPLOADPORT);
+        
+        strcat(fulltext,temp);
+        strcat(fulltext," P2P-CI/1.0\nHost: ");
+        strcat(fulltext,hostname);
+        strcat(fulltext,"\nPort: ");
+        strcat(fulltext,port_string);
+        strcat(fulltext,"\0");
+        
+        printf("Sending %s\n",fulltext);
+
         
 	}else if(option == GET){
         
@@ -122,7 +132,7 @@ int initClient(int sockfd){
         numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
         buf[numbytes] = '\0';
         
-        printf("Response from server : %s\n",buf);
+        printf("Response from server : %s\n\n",buf);
     }
     
     fclose(fp);
@@ -143,13 +153,37 @@ int sendGet(int sockfd,int rfcid){
     
 }
 
-int sendLookup(){
+int sendLookup(int sockfd, int rfcid){
+
+    char* buf;
+    int numbytes;
+    
+    reqHeader(sockfd,LOOKUP,rfcid,NULL);
+    buf=(char *)malloc(MAXDATASIZE);
+    numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
+    buf[numbytes] = '\0';
+    
+    printf("Response from server : %s\n\n",buf);
+
+}
+
+int sendList(int sockfd){
+    
+    char* buf;
+    int numbytes;
+    
+    reqHeader(sockfd,LISTALL,NULL,NULL);
+    buf=(char *)malloc(MAXDATASIZE);
+    numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
+    buf[numbytes] = '\0';
+    
+    printf("Response from server : %s\n",buf);
     
 }
 
 int main(int argc,char *argv[]){
 
-	char* PORTNO = "5538";
+	char* PORTNO = "5540";
 	char* SERVERIP = "127.0.0.1";
 
     //Populate the OS name
@@ -192,7 +226,9 @@ int main(int argc,char *argv[]){
 
     initClient(sockfd);
     
-    //sendGet(sockfd,789);
+    sendLookup(sockfd,789);
+    
+    sendList(sockfd);
     
 	close(sockfd);
     

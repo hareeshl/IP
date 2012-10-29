@@ -56,6 +56,45 @@ bool isHostAvailable(char *hostname){
     return false;
 }
 
+rfcdetailnode* getList(){
+    return rfcdetailhead;
+}
+
+//Get hosts with rfcid
+rfcdetailnode* getHostwithRFC(int rfcid){
+    rfcdetailnode* temp = rfcdetailhead;
+    rfcdetailnode* nodes = NULL;
+    rfcdetailnode* nodescont= NULL;
+    
+    while(temp != NULL){
+        if(temp->rfcno == rfcid){
+            if(nodes == NULL){
+                nodes = (struct rfcdetailnode *)malloc(sizeof(rfcdetailnode));
+                nodes->rfcno = rfcid;
+                nodes->hostname=temp->hostname;
+                nodes->rfctitle=temp->rfctitle;
+                nodes->next = NULL;
+            }else{
+                nodescont = (struct rfcdetailnode *)malloc(sizeof(rfcdetailnode));
+                nodescont->rfcno = rfcid;
+                nodescont->hostname=temp->hostname;
+                nodescont->rfctitle=temp->rfctitle;
+                nodescont->next = nodes;
+                nodes = nodescont;
+            }
+        }
+            
+        temp = temp->next;
+    }
+    
+    if(nodescont == NULL)
+        return nodes;
+    else if(nodes == NULL)
+        return NULL;
+    else 
+        return nodescont;
+}
+
 /*int main(){
 	printf("List test\n");
 	
@@ -83,8 +122,28 @@ bool isHostAvailable(char *hostname){
 	temp3->rfctitle = "choke";
 	temp3->hostname = "sys2";
 	insertFrontrfcList(temp3);
+    
+    temp3 = malloc(sizeof(rfcdetailnode));
+	temp3->rfcno =2;
+	temp3->rfctitle = "choke";
+	temp3->hostname = "sys1";
+	insertFrontrfcList(temp3);
 	
+    temp3 = malloc(sizeof(rfcdetailnode));
+	temp3->rfcno =3;
+	temp3->rfctitle = "Test";
+	temp3->hostname = "sys1";
+	insertFrontrfcList(temp3);
+    
 	printAll();
+	
+    rfcdetailnode* tempx = getList();
+    
+	printf("Nodes : \n");
+	while(tempx != NULL){
+		printf("%d : %s : %s \n",tempx->rfcno,tempx->rfctitle,tempx->hostname);
+		tempx = tempx->next;
+	}
 	
 	return 0;
 }*/

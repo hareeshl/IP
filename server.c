@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5538"
+#define PORTNO "5540"
 #define MAXDATASIZE 1025
 
 char* command;
@@ -137,8 +137,6 @@ int main(int argc,char *argv[]){
                     command=(char *)malloc(10);
                     rfctitle=(char *)malloc(256);
                     
-                    int rfcid,uploadportno;
-                    
                     //Add RFC list
                     numbytes = recv(i,buf,MAXDATASIZE-1,0);
                     
@@ -169,6 +167,8 @@ int main(int argc,char *argv[]){
                     //Check if method ADD
                     if(strncmp(command,"ADD",3) == 0){
                    
+                        int rfcid,uploadportno;
+
                         //Upload port no
                         ch = strstr(buf,"Port:");
                         sscanf(ch,"%s %d",field,&uploadportno);
@@ -216,9 +216,84 @@ int main(int argc,char *argv[]){
                     
                     //Check if method GET
                     if(strncmp(command,"LOOKUP",3) == 0){
+                        
+                        int rfcid,uploadportno;
+                        
                         printf("LOOKUP CALL\n");
                         char *responseheader = generateResponseHeader();
-                        printf("Lookup response : %s\n",responseheader);
+                        char response[4096]="";
+                        strcat(response,responseheader);
+                        
+                        //Get rfcid
+                        char *ch;
+                        char field[256],field1[256];
+                        ch = strstr(buf,"LOOKUP");
+                        printf("%s\n",ch);
+                        sscanf(ch,"%s %s %d",field,field1,&rfcid);
+                        
+                        rfcdetailnode* lookup;
+                        lookup = getHostwithRFC(rfcid);
+                        
+                        while(lookup != NULL){
+                            
+                            char buf[10]="";
+                            
+                            sprintf(buf,"%d",lookup->rfcno);
+                            strcat(response,buf);
+                            strcat(response," ");
+                            strcat(response,lookup->rfctitle);
+                            strcat(response," ");
+                            strcat(response,lookup->hostname);
+                            strcat(response," ");
+                            strcat(response,"\n");
+                            
+                            lookup = lookup->next;
+                        }
+                                                
+                        printf("Lookup response : %s\n",response);
+                        send(i,response,strlen(response),0);
+                        
+                    }
+                    
+                    strncpy(command,buf,6);
+                    
+                    //Check if method GET
+                    if(strncmp(command,"LIST",3) == 0){
+                        int rfcid,uploadportno;
+                        
+                        printf("LIST CALL\n");
+                        char *responseheader = generateResponseHeader();
+                        char response[4096]="";
+                        strcat(response,responseheader);
+                        
+                        //Get rfcid
+                        char *ch;
+                        char field[256],field1[256];
+                        ch = strstr(buf,"LIST");
+                        printf("%s\n",ch);
+                        sscanf(ch,"%s %s %d",field,field1,&rfcid);
+                        
+                        rfcdetailnode* list;
+                        list = getList();
+                        
+                        while(list != NULL){
+                            
+                            char buf[10]="";
+                            
+                            sprintf(buf,"%d",list->rfcno);
+                            strcat(response,buf);
+                            strcat(response," ");
+                            strcat(response,list->rfctitle);
+                            strcat(response," ");
+                            strcat(response,list->hostname);
+                            strcat(response," ");
+                            strcat(response,"\n");
+                            
+                            list = list->next;
+                        }
+                        
+                        printf("List response : %s\n",response);
+                        send(i,response,strlen(response),0);
                         
                     }
                     

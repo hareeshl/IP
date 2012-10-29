@@ -17,7 +17,16 @@ typedef struct{
 	struct rfcdetailnode *next;
 }rfcdetailnode;
 
+typedef struct{
+	int rfcno;
+	char *rfctitle;
+	char *hostname;
+	struct rfcdetailnode *next;
+}rfc;
+
 int insertFrontPeerList(peernode* newnode);
 int insertFrontrfcList(rfcdetailnode* newnode);
 void printAll();
 bool isHostAvailable(char *hostname);
+rfcdetailnode* getHostwithRFC(int rfcid);
+rfcdetailnode* getList();
