@@ -14,6 +14,7 @@ typedef struct{
 	int rfcno;
 	char *rfctitle;
 	char *hostname;
+    int uploadportno;
 	struct rfcdetailnode *next;
 }rfcdetailnode;
 
@@ -21,6 +22,7 @@ typedef struct{
 	int rfcno;
 	char *rfctitle;
 	char *hostname;
+    int uploadportno;
 	struct rfcdetailnode *next;
 }rfc;
 
