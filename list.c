@@ -37,7 +37,7 @@ void printAll(){
 	rfcdetailnode* temp1 = rfcdetailhead;
 	printf("rfc's : \n");
 	while(temp1 != NULL){
-		printf("%d : %s : %s \n",temp1->rfcno,temp1->rfctitle,temp1->hostname);
+		printf("%d : %s : %s : %d\n",temp1->rfcno,temp1->rfctitle,temp1->hostname,temp1->uploadportno);
 		temp1 = temp1->next;
 	}
 	printf("\n");
@@ -73,12 +73,16 @@ rfcdetailnode* getHostwithRFC(int rfcid){
                 nodes->rfcno = rfcid;
                 nodes->hostname=temp->hostname;
                 nodes->rfctitle=temp->rfctitle;
+                nodes->uploadportno = temp->uploadportno;
+                printf("Rfc : %s,%d",nodes->hostname,temp->uploadportno);
                 nodes->next = NULL;
             }else{
                 nodescont = (struct rfcdetailnode *)malloc(sizeof(rfcdetailnode));
                 nodescont->rfcno = rfcid;
                 nodescont->hostname=temp->hostname;
                 nodescont->rfctitle=temp->rfctitle;
+                nodescont->uploadportno = temp->uploadportno;
+                printf("Rfc : %s,%d",temp->hostname,temp->uploadportno);
                 nodescont->next = nodes;
                 nodes = nodescont;
             }
@@ -94,8 +98,8 @@ rfcdetailnode* getHostwithRFC(int rfcid){
     else 
         return nodescont;
 }
-
-/*int main(){
+/*
+int main(){
 	printf("List test\n");
 	
 	peernode *temp = malloc(sizeof(peernode));
@@ -115,33 +119,37 @@ rfcdetailnode* getHostwithRFC(int rfcid){
 	temp1->rfcno =1;
 	temp1->rfctitle = "Test";
 	temp1->hostname = "sys1";
+    temp1->uploadportno = 1000;
 	insertFrontrfcList(temp1);
 	
 	rfcdetailnode *temp3 = malloc(sizeof(rfcdetailnode));
 	temp3->rfcno =2;
 	temp3->rfctitle = "choke";
-	temp3->hostname = "sys2";
+	temp3->hostname = "sys1";
+    temp3->uploadportno = 1001;
 	insertFrontrfcList(temp3);
     
     temp3 = malloc(sizeof(rfcdetailnode));
 	temp3->rfcno =2;
 	temp3->rfctitle = "choke";
-	temp3->hostname = "sys1";
+	temp3->hostname = "sys2";
+    temp3->uploadportno = 1002;
 	insertFrontrfcList(temp3);
 	
     temp3 = malloc(sizeof(rfcdetailnode));
-	temp3->rfcno =3;
+	temp3->rfcno =2;
 	temp3->rfctitle = "Test";
-	temp3->hostname = "sys1";
+	temp3->hostname = "sys3";
+    temp3->uploadportno = 1003;
 	insertFrontrfcList(temp3);
     
 	printAll();
 	
-    rfcdetailnode* tempx = getList();
+    rfcdetailnode* tempx = getHostwithRFC(2);
     
 	printf("Nodes : \n");
 	while(tempx != NULL){
-		printf("%d : %s : %s \n",tempx->rfcno,tempx->rfctitle,tempx->hostname);
+		printf("%d : %s : %s : %d\n",tempx->rfcno,tempx->rfctitle,tempx->hostname,tempx->uploadportno);
 		tempx = tempx->next;
 	}
 	

@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5540"
+#define PORTNO "5542"
 #define MAXDATASIZE 1025
 
 char* command;
@@ -34,14 +34,15 @@ void addClientToPeer(char* hostname,int portno){
 	temp->hostname=hostname;
     temp->uploadportno=portno;
 	insertFrontPeerList(temp);
-}
+}   
 
-void addRFCDetail(int rfcid,char* rfctitle, char *hostname){
+void addRFCDetail(int rfcid,char* rfctitle, char *hostname,int uploadportno){
     
     rfcdetailnode *temp1 = (struct rfcdetailnode *)malloc(sizeof(rfcdetailnode));
 	temp1->rfcno =rfcid;
 	temp1->rfctitle=rfctitle;
 	temp1->hostname=hostname;
+    temp1->uploadportno = uploadportno;
 	insertFrontrfcList(temp1);
 }
 
@@ -178,6 +179,7 @@ int main(int argc,char *argv[]){
                             addClientToPeer(hostname,uploadportno);
                         
                         printf("ADD method call\n");
+                        
                         //Add rfc detail to the rfc detail list,rfcid
                         char *ch;
                         char field[256],field1[256];
@@ -190,7 +192,7 @@ int main(int argc,char *argv[]){
                         ch = strstr(buf,"Title:");
                         sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
                         
-                        addRFCDetail(rfcid,rfctitle,hostname);
+                        addRFCDetail(rfcid,rfctitle,hostname,uploadportno);
                         
                         //Reply back to the client
                         char response[2048]="";
@@ -206,6 +208,7 @@ int main(int argc,char *argv[]){
                         char port_string[32];
                         sprintf(port_string,"%d",uploadportno);
                         strcat(response,port_string);
+                        strcat(response,"\0");
                         send(i,response,strlen(response),0);
                         
                         printf("Add request response completed\n");
@@ -238,6 +241,9 @@ int main(int argc,char *argv[]){
                             
                             char buf[10]="";
                             
+                            char portstr[32];
+                            sprintf(portstr,"%d",lookup->uploadportno);
+                            
                             sprintf(buf,"%d",lookup->rfcno);
                             strcat(response,buf);
                             strcat(response," ");
@@ -245,11 +251,13 @@ int main(int argc,char *argv[]){
                             strcat(response," ");
                             strcat(response,lookup->hostname);
                             strcat(response," ");
+                            strcat(response,portstr);
                             strcat(response,"\n");
                             
                             lookup = lookup->next;
                         }
-                                                
+                        strcat(response,"\0");
+                        
                         printf("Lookup response : %s\n",response);
                         send(i,response,strlen(response),0);
                         
@@ -280,6 +288,9 @@ int main(int argc,char *argv[]){
                             
                             char buf[10]="";
                             
+                            char portstr[32];
+                            sprintf(portstr,"%d",list->uploadportno);
+                            
                             sprintf(buf,"%d",list->rfcno);
                             strcat(response,buf);
                             strcat(response," ");
@@ -287,10 +298,14 @@ int main(int argc,char *argv[]){
                             strcat(response," ");
                             strcat(response,list->hostname);
                             strcat(response," ");
+                            strcat(response,portstr);
+                            strcat(response," ");
+                            
                             strcat(response,"\n");
                             
                             list = list->next;
                         }
+                        strcat(response,"\0");
                         
                         printf("List response : %s\n",response);
                         send(i,response,strlen(response),0);
