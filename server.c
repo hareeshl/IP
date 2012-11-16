@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5542"
+#define PORTNO "5552"
 #define MAXDATASIZE 1025
 
 char* command;
@@ -110,6 +110,7 @@ int main(int argc,char *argv[]){
         
         for(i=0;i<=fdmax;i++){
             if(FD_ISSET(i,&read_fds)){
+                
                 if(i == sockfd){
                     
                     //New connection
@@ -147,7 +148,12 @@ int main(int argc,char *argv[]){
                         FD_CLR(i,&master);
                         continue;
                     }else if(numbytes == 0){
-                        printf("Connection closed: Exiting\n");
+                        //printf("Connection closed: Exiting\n");
+                        
+                        //Delete host detail from server DS's
+                        struct hostent *client = gethostbyaddr((char *)&connector_addr.sin_addr,sizeof(connector_addr.sin_addr),connector_addr.sin_family);
+                        //deletePeer();
+                        
                         close(i);
                         FD_CLR(i,&master);
                         continue;
@@ -164,7 +170,7 @@ int main(int argc,char *argv[]){
                     sscanf(ch,"%[^' '] %[^\n]",field,hostname);
                     
                     strncpy(command,buf,3);
-                                
+                    
                     //Check if method ADD
                     if(strncmp(command,"ADD",3) == 0){
                    
@@ -178,19 +184,19 @@ int main(int argc,char *argv[]){
                         if(!isHostAvailable(hostname))
                             addClientToPeer(hostname,uploadportno);
                         
-                        printf("ADD method call\n");
+                        //printf("ADD method call\n");
                         
                         //Add rfc detail to the rfc detail list,rfcid
                         char *ch;
                         char field[256],field1[256];
                         ch = strstr(buf,"ADD");
-                        printf("%s\n",ch);
+                        //printf("%s\n",ch);
                         sscanf(ch,"%s %s %d",field,field1,&rfcid);
                         
                         //rfctitle
                         memset(rfctitle,'\0',strlen(rfctitle));
                         ch = strstr(buf,"Title:");
-                        sscanf(ch,"%[^' '] %[^\n]",field,rfctitle);
+                        sscanf(ch,"%[^' '] %[^\r\n]",field,rfctitle);
                         
                         addRFCDetail(rfcid,rfctitle,hostname,uploadportno);
                         
@@ -211,7 +217,7 @@ int main(int argc,char *argv[]){
                         strcat(response,"\0");
                         send(i,response,strlen(response),0);
                         
-                        printf("Add request response completed\n");
+                        //printf("Add request response completed\n");
                         
                     }
                     
@@ -222,7 +228,7 @@ int main(int argc,char *argv[]){
                         
                         int rfcid,uploadportno;
                         
-                        printf("LOOKUP CALL\n");
+                        //printf("LOOKUP CALL\n");
                         char *responseheader = generateResponseHeader();
                         char response[4096]="";
                         strcat(response,responseheader);
@@ -258,18 +264,18 @@ int main(int argc,char *argv[]){
                         }
                         strcat(response,"\0");
                         
-                        printf("Lookup response : %s\n",response);
+                        //printf("Lookup response : %s\n",response);
                         send(i,response,strlen(response),0);
                         
                     }
                     
                     strncpy(command,buf,6);
                     
-                    //Check if method GET
+                    //Check if method LIST
                     if(strncmp(command,"LIST",3) == 0){
                         int rfcid,uploadportno;
                         
-                        printf("LIST CALL\n");
+                        //printf("LIST CALL\n");
                         char *responseheader = generateResponseHeader();
                         char response[4096]="";
                         strcat(response,responseheader);
@@ -307,9 +313,22 @@ int main(int argc,char *argv[]){
                         }
                         strcat(response,"\0");
                         
-                        printf("List response : %s\n",response);
+                        //printf("List response : %s\n",response);
                         send(i,response,strlen(response),0);
                         
+                    }
+                    
+                    strncpy(command,buf,6);
+                    
+                    //Check if method EXIT
+                    if(strncmp(command,"EXIT",3) == 0){
+                        
+                        //printf("Call to exit\n");
+                        
+                        //printf("Connection closed from : %s",hostname);
+                        
+                        deletePeer(hostname);
+                        deleteRFCdetailnode(hostname);
                     }
                     
                     printAll();

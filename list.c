@@ -56,6 +56,50 @@ bool isHostAvailable(char *hostname){
     return false;
 }
 
+bool deletePeer(char *hostname){
+    
+    peernode* temp = peershead;
+    peernode* prev;
+    
+    while(temp != NULL){
+        
+        if(strcmp(temp->hostname,hostname) == 0){
+            
+            if(temp == peershead){
+                peershead = temp->next;
+                free(temp);
+                break;
+            }
+            
+            prev->next = temp->next;
+            free(temp);
+        }
+        
+        prev = temp;
+        temp = temp->next;
+    }
+}
+
+bool deleteRFCdetailnode(char *hostname){
+    rfcdetailnode* temp = rfcdetailhead;
+    rfcdetailnode* prev = NULL;
+    
+    while(temp != NULL){
+        
+        if(strcmp(temp->hostname,hostname) == 0){
+            
+            if(temp == rfcdetailhead){
+                rfcdetailhead = temp->next;
+            }else{
+                prev->next = temp->next;
+            }
+        }else{
+            prev = temp;
+        }
+            temp = temp->next;
+    }
+}
+
 rfcdetailnode* getList(){
     return rfcdetailhead;
 }
@@ -74,7 +118,6 @@ rfcdetailnode* getHostwithRFC(int rfcid){
                 nodes->hostname=temp->hostname;
                 nodes->rfctitle=temp->rfctitle;
                 nodes->uploadportno = temp->uploadportno;
-                printf("Rfc : %s,%d",nodes->hostname,temp->uploadportno);
                 nodes->next = NULL;
             }else{
                 nodescont = (struct rfcdetailnode *)malloc(sizeof(rfcdetailnode));
@@ -82,7 +125,6 @@ rfcdetailnode* getHostwithRFC(int rfcid){
                 nodescont->hostname=temp->hostname;
                 nodescont->rfctitle=temp->rfctitle;
                 nodescont->uploadportno = temp->uploadportno;
-                printf("Rfc : %s,%d",temp->hostname,temp->uploadportno);
                 nodescont->next = nodes;
                 nodes = nodescont;
             }
@@ -109,7 +151,10 @@ int main(){
 	peernode *temp2= malloc(sizeof(peernode));
 	temp2->hostname="sys2";		
 	insertFrontPeerList(temp2);
-
+    
+    peernode *tempa= malloc(sizeof(peernode));
+	tempa->hostname="sys3";
+	insertFrontPeerList(tempa);
     
     printf("ishostavailable :%s\n",(isHostAvailable("sys1"))?"true":"false");
     printf("ishostavailable :%s\n",(isHostAvailable("sys2"))?"true":"false");
@@ -145,13 +190,11 @@ int main(){
     
 	printAll();
 	
-    rfcdetailnode* tempx = getHostwithRFC(2);
+    deletePeer("sys1");
     
-	printf("Nodes : \n");
-	while(tempx != NULL){
-		printf("%d : %s : %s : %d\n",tempx->rfcno,tempx->rfctitle,tempx->hostname,tempx->uploadportno);
-		tempx = tempx->next;
-	}
-	
+    deleteRFCdetailnode("sys3");
+    
+    printAll();
+    
 	return 0;
 }*/

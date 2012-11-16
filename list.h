@@ -32,3 +32,5 @@ void printAll();
 bool isHostAvailable(char *hostname);
 rfcdetailnode* getHostwithRFC(int rfcid);
 rfcdetailnode* getList();
+bool deletePeer(char *hostname);
+bool deleteRFCdetailnode(char *hostname);

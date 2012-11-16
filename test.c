@@ -1,44 +1,55 @@
-
-#include <stdio.h>
-#include<string.h>
+#include<stdio.h>
 #include<stdlib.h>
-#include"list.h"
-
-int addClientToPeer(char* hostname){
-    peernode *temp = (peernode *)malloc(sizeof(peernode));
-	temp->hostname = hostname;
-	insertFrontPeerList(temp);
-}
+#include<unistd.h>
+#include<errno.h>
+#include<sys/wait.h>
+#include<signal.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netdb.h>
+#include<string.h>
+#include<arpa/inet.h>
+#include<netinet/in.h>
+#include<sys/utsname.h>
+#define MAXDATASIZE 1025
 
 int main(){
     
-    char *ch;
-    char field[256],*hostname;
-    int field2;
-    char *buf = (char *)malloc(sizeof(512));
-    hostname = (char *)malloc(sizeof(256));
-    memset(hostname,'\0',strlen(hostname));
-    buf="Host: nom0061218.nomadic.ncsu.edusfsdfs\n";
-    int i=0;
+    char *buf;
+    int status,sockfd,numbytes;
+    struct addrinfo hints,getfilestruct,*res,*getfileserver,getstruct,*me,*p;
+    socklen_t addr_size;
+    char s[INET6_ADDRSTRLEN];
+    struct sigaction sa;
+    int getfilesocketfd;
+    struct sockaddr_in *h;
+	int rv;
     
-    ch = strstr(buf,"Host:");
-    sscanf(ch,"%[^' '] %[^\n]",field,hostname);
+    memset(&getfilestruct,0,sizeof(getfilestruct));
+    getfilestruct.ai_family = AF_UNSPEC;
+    getfilestruct.ai_socktype = SOCK_STREAM;
     
-    printf("Substring =>%s,%s\n",field,hostname);
+    getaddrinfo("nom0054215.nomadic.ncsu.edu","65432",&getfilestruct,&getfileserver);
     
-    addClientToPeer(hostname);
+    // loop through all the results and connect to the first we can
     
-    buf = (char *)malloc(sizeof(512));
-    hostname = (char *)malloc(sizeof(256));
+    if((getfilesocketfd = socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == -1){
+        perror("Server:upload socket creation error");
+    }
     
-    buf="Host: sfsdsssssadadasdasdadasdadfssdfsdfsdfsf\n";
-
-    ch = strstr(buf,"Host:");
-    sscanf(ch,"%[^' '] %[^\n]",field,hostname);
+    if(connect(getfilesocketfd,p->ai_addr,p->ai_addrlen) == -1){
+        close(getfilesocketfd);
+        perror("Client : Connect");
+        exit(1);
+    }
     
-    printf("Substring =>%s,%s\n",field,hostname);
+    char *str,*uploadbuf="P2P-CI/1.0 200 OK\n345 RFC345 nom0061096.nomadic.ncsu.edu";
     
-    addClientToPeer(hostname);
+    char field[256],field1[256],rfcid[256];
     
-    printAll();
+    str = strstr(uploadbuf,"\n");
+    printf("%s\n",str);
+    sscanf(str,"%s %s %s",field,field1,rfcid);
+    
+    printf("%s,%s,%s",field,field1,rfcid);
 }
