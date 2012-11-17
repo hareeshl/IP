@@ -68,9 +68,9 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title,char* uploadport){
         strcat(fulltext,"\nPort: ");
         strcat(fulltext,uploadport);
         strcat(fulltext,"\0");
-       
+        
         //printf("Sending %s\n",fulltext);
- 
+        
 	}else if(option == LISTALL){
         
         temp = "LIST ALL ";
@@ -86,7 +86,7 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title,char* uploadport){
         strcat(fulltext,"\0");
         
         //printf("Sending %s\n",fulltext);
-
+        
         
 	}else if(option == GET){
         
@@ -97,7 +97,7 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title,char* uploadport){
         
         strcat(fulltext,temp);
         strcat(fulltext,rfcid_string);
-                
+        
     }else if(option == EXIT){
         
         temp = "EXIT ";
@@ -108,7 +108,7 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title,char* uploadport){
         strcat(fulltext,hostname);
         
         //printf("Sending %s\n",fulltext);
-
+        
     }
 	
     sleep(1);
@@ -151,13 +151,13 @@ void *get_in_addr(struct sockaddr *sa){
 	if(sa->sa_family == AF_INET){
 		return &(((struct sockaddr_in*)sa)->sin_addr);
     }
-
+    
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 int sendGet(int serversockfd,int rfcid,char *uploadportno){
     
-    //Lookup 
+    //Lookup
     char* buf;
     int numbytes;
     
@@ -182,17 +182,17 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     struct addrinfo getfilestruct,*getfileserver;
     
     /*struct hostent* h;
-    h = gethostbyname(hostname);
-    
-    if( h == NULL){
-        printf("Unknown host\n");
-    }
-    
-    struct sockaddr_in server;
-    
-    memcpy(&server.sin_addr,h->h_addr_list[0], h->h_length);
-    server.sin_family= AF_INET;
-    server.sin_port = htons(portno);*/
+     h = gethostbyname(hostname);
+     
+     if( h == NULL){
+     printf("Unknown host\n");
+     }
+     
+     struct sockaddr_in server;
+     
+     memcpy(&server.sin_addr,h->h_addr_list[0], h->h_length);
+     server.sin_family= AF_INET;
+     server.sin_port = htons(portno);*/
     
     char port_string[32];
     sprintf(port_string,"%d",portno);
@@ -222,7 +222,7 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
         perror("Client : Connect");
         exit(1);
     }
-
+    
     
     numbytes=-1;
     
@@ -255,11 +255,11 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     
     //ADD detail to server
     reqHeader(serversockfd,ADD,rfcid,"title",uploadportno);
-
+    
 }
 
 char* sendLookup(int sockfd, int rfcid,char *uploadportno){
-
+    
     char* buf;
     int numbytes;
     
@@ -291,8 +291,8 @@ void sendExit(int sockfd){
 }
 
 int main(int argc,char *argv[]){
-
-	char* PORTNO = "5555";
+    
+	char* PORTNO = "5556";
     char* uploadp = argv[2];
 	char* SERVERIP = argv[1];
     
@@ -302,13 +302,13 @@ int main(int argc,char *argv[]){
     
     if( pid > 0){
         //Parent process
-    
+        
         //Populate the OS name
         if(uname(&sysname)){
             perror("Error obtaining os name");
             exit(-1);
         }
-    
+        
         hostname[511]='\0';
         char localname[512];
         
@@ -326,10 +326,10 @@ int main(int argc,char *argv[]){
             exit(1);
         }
         
-        for(p = info; p != NULL; p = p->ai_next) {
-            printf("canonical hostname: %s\n", p->ai_canonname);
-            strcpy(hostname,p->ai_canonname);
-        }
+        //for(p = info; p != NULL; p = p->ai_next) {
+        printf("canonical hostname: %s\n", info->ai_canonname);
+        strcpy(hostname,info->ai_canonname);
+        //}
         
         freeaddrinfo(info);
         
@@ -359,10 +359,10 @@ int main(int argc,char *argv[]){
             exit(1);
         }
         
-        inet_ntop(res->ai_family,get_in_addr((struct sockaddr *)res->ai_addr),s,sizeof(s));
-        gethostname(hostname,1023);
+        //inet_ntop(res->ai_family,get_in_addr((struct sockaddr *)res->ai_addr),s,sizeof(s));
+        //gethostname(hostname,1023);
         printf("Hostname : %s\n",hostname);
-        printf("Client connecting to : %s\n",s);
+        //printf("Client connecting to : %s\n",s);
         
         //Initialize client
         initClient(sockfd,uploadp);
@@ -385,13 +385,13 @@ int main(int argc,char *argv[]){
             scanf("%d",&opt);
             
             switch (opt) {
-                
-                //List all
+                    
+                    //List all
                 case 1:
                     sendList(sockfd,uploadp);
                     break;
                     
-                //Lookup
+                    //Lookup
                 case 2:
                     printf("Enter the rfc id :");
                     scanf("%d",&id);
@@ -399,7 +399,7 @@ int main(int argc,char *argv[]){
                     printf("\n");
                     break;
                     
-                //Get
+                    //Get
                 case 3:
                     
                     printf("Enter the rfc id :");
@@ -407,8 +407,8 @@ int main(int argc,char *argv[]){
                     sendGet(sockfd,id,uploadp);
                     printf("\n");
                     break;
-                
-                //Exit
+                    
+                    //Exit
                 case 4:
                     sendExit(sockfd);
                     kill(pid,SIGINT);
@@ -471,12 +471,12 @@ int main(int argc,char *argv[]){
             
             n = recv(uploadfd,uploadbuf,MAXDATASIZE-1,0);
             uploadbuf[n] = '\0';
-           
+            
             //printf("Received %s:",uploadbuf);
             
             char *str,field[256],field1[256];
             int rfcid;
-
+            
             str = strstr(uploadbuf,"GET");
             sscanf(str,"%s %s %d",field,field1,&rfcid);
             //printf("Rfcid: %d:",rfcid);
