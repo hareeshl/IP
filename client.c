@@ -181,7 +181,7 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     int getfilesocketfd;
     struct addrinfo getfilestruct,*getfileserver;
     
-    struct hostent* h;
+    /*struct hostent* h;
     h = gethostbyname(hostname);
     
     if( h == NULL){
@@ -192,17 +192,37 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     
     memcpy(&server.sin_addr,h->h_addr_list[0], h->h_length);
     server.sin_family= AF_INET;
-    server.sin_port = htons(portno);
+    server.sin_port = htons(portno);*/
     
-    if((getfilesocketfd = socket(AF_INET,SOCK_STREAM,0)) == -1){
-        perror("Server:upload socket creation error");
+    char port_string[32];
+    sprintf(port_string,"%d",portno);
+    
+    int status,sockfd;
+    struct addrinfo hints,*res,getstruct,*me;
+    
+    //Server details
+    memset(&hints,0,sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    
+    status = getaddrinfo(hostname,port_string,&hints,&res);
+    
+    if(status != 0){
+        perror("Getaddrinfo");
+        return;
     }
     
-    if(connect(getfilesocketfd,(struct sockaddr *)&server,sizeof(server)) == -1){
-        close(getfilesocketfd);
+    //Create a socket
+    if((getfilesocketfd = socket(res->ai_family,res->ai_socktype,res->ai_protocol)) == -1){
+        perror("Server:socket creating error");
+    }
+    
+    if(connect(getfilesocketfd,res->ai_addr,res->ai_addrlen) == -1){
+        close(sockfd);
         perror("Client : Connect");
         exit(1);
     }
+
     
     numbytes=-1;
     
@@ -290,7 +310,28 @@ int main(int argc,char *argv[]){
         }
     
         hostname[511]='\0';
-        gethostname(hostname,511);
+        char localname[512];
+        
+        gethostname(localname,511);
+        int sx;
+        struct addrinfo hints1,*info,*p;
+        
+        memset(&hints1, 0, sizeof hints1);
+        hints1.ai_family = AF_UNSPEC; /*either IPV4 or IPV6*/
+        hints1.ai_socktype = SOCK_STREAM;
+        hints1.ai_flags = AI_CANONNAME;
+        
+        if ((sx = getaddrinfo(localname, "http", &hints1, &info)) != 0) {
+            //fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gai_result));
+            exit(1);
+        }
+        
+        for(p = info; p != NULL; p = p->ai_next) {
+            printf("canonical hostname: %s\n", p->ai_canonname);
+            strcpy(hostname,p->ai_canonname);
+        }
+        
+        freeaddrinfo(info);
         
         char *buf;
         int status,sockfd,numbytes;
@@ -306,6 +347,7 @@ int main(int argc,char *argv[]){
         
         getaddrinfo(SERVERIP,PORTNO,&hints,&res);
         
+        
         //Create a socket
         if((sockfd = socket(res->ai_family,res->ai_socktype,res->ai_protocol)) == -1){
             perror("Server:socket creating error");
@@ -319,8 +361,8 @@ int main(int argc,char *argv[]){
         
         inet_ntop(res->ai_family,get_in_addr((struct sockaddr *)res->ai_addr),s,sizeof(s));
         gethostname(hostname,1023);
-        //printf("Hostname : %s\n",hostname);
-        //printf("Client connecting to : %s\n",s);
+        printf("Hostname : %s\n",hostname);
+        printf("Client connecting to : %s\n",s);
         
         //Initialize client
         initClient(sockfd,uploadp);
