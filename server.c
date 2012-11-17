@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5552"
+#define PORTNO "5555"
 #define MAXDATASIZE 1025
 
 char* command;

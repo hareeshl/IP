@@ -107,7 +107,7 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title,char* uploadport){
         strcat(fulltext,"Host: ");
         strcat(fulltext,hostname);
         
-        printf("Sending %s\n",fulltext);
+        //printf("Sending %s\n",fulltext);
 
     }
 	
@@ -140,7 +140,7 @@ int initClient(int sockfd,char *uploadportno){
         numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
         buf[numbytes] = '\0';
         
-        printf("%s\n\n",buf);
+        printf("%s\n",buf);
     }
     
     fclose(fp);
@@ -170,13 +170,10 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     int portno;
     
     str = strstr(buf,"\n");
-    printf("%s\n",str);
+    //printf("%s\n",str);
     sscanf(str,"%s %s %s %d",field,field1,hostname,&portno);
     
-    printf("Hostname :%s, portno: %d",hostname,portno);
-    
-    char port_string[32];
-    sprintf(port_string,"%d",portno);
+    //printf("Hostname :%s, portno: %d",hostname,portno);
     
     //----End of lookup
     
@@ -184,27 +181,34 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     int getfilesocketfd;
     struct addrinfo getfilestruct,*getfileserver;
     
-    memset(&getfilestruct,0,sizeof(getfilestruct));
-    getfilestruct.ai_family = AF_UNSPEC;
-    getfilestruct.ai_socktype = SOCK_STREAM;
+    struct hostent* h;
+    h = gethostbyname(hostname);
     
-    getaddrinfo(hostname,port_string,&getfilestruct,&getfileserver);
+    if( h == NULL){
+        printf("Unknown host\n");
+    }
     
-    if((getfilesocketfd = socket(getfileserver->ai_family,getfileserver->ai_socktype,getfileserver->ai_protocol)) == -1){
+    struct sockaddr_in server;
+    
+    memcpy(&server.sin_addr,h->h_addr_list[0], h->h_length);
+    server.sin_family= AF_INET;
+    server.sin_port = htons(portno);
+    
+    if((getfilesocketfd = socket(AF_INET,SOCK_STREAM,0)) == -1){
         perror("Server:upload socket creation error");
     }
     
-    if(connect(getfilesocketfd,getfileserver->ai_addr,getfileserver->ai_addrlen) == -1){
+    if(connect(getfilesocketfd,(struct sockaddr *)&server,sizeof(server)) == -1){
         close(getfilesocketfd);
-        perror("Get rfc client : Connect");
+        perror("Client : Connect");
         exit(1);
     }
     
     numbytes=-1;
     
-    *buf=(char *)malloc(MAXDATASIZE);
+    char received[1];
     
-    printf("Get request for : %d\n",rfcid);
+    //printf("Get request for : %d\n",rfcid);
     reqHeader(getfilesocketfd,GET,rfcid,NULL,NULL);
     
     //Create a copy of the rfc
@@ -215,16 +219,18 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     
     file = fopen(filename,"w");
     
+    char content[1024];
+    
     int bytesread = 0;
     
     while(numbytes != 0){
-        numbytes = recv(getfilesocketfd,buf,MAXDATASIZE-1,0);
-        fprintf(file,"%s",buf);
+        numbytes = recv(getfilesocketfd,received,1,0);
+        fprintf(file,"%c",received[0]);
         //bytesread += numbytes;
     }
     
     //buf[bytesread] = '\0';
-    
+    close(getfilesocketfd);
     fclose(file);
     
     //ADD detail to server
@@ -242,19 +248,7 @@ char* sendLookup(int sockfd, int rfcid,char *uploadportno){
     numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
     buf[numbytes] = '\0';
     
-    printf("%s\n\n",buf);
-    
-    char *str;
-    
-    char field[256],field1[256],hostname[256];
-    int portno;
-    
-    str = strstr(buf,"\n");
-    printf("%s\n",str);
-    sscanf(str,"%s %s %s %d",field,field1,hostname,&portno);
-    
-    printf("Hostname :%s, portno: %d",hostname,portno);
-
+    printf("%s\n",buf);
 }
 
 int sendList(int sockfd,char* uploadportno){
@@ -272,14 +266,13 @@ int sendList(int sockfd,char* uploadportno){
 }
 
 void sendExit(int sockfd){
-    printf("call exit\n");
     reqHeader(sockfd,EXIT,NULL,NULL,NULL);
-    printf("End of exit\n");
+    //printf("End of exit\n");
 }
 
 int main(int argc,char *argv[]){
 
-	char* PORTNO = "5552";
+	char* PORTNO = "5555";
     char* uploadp = argv[2];
 	char* SERVERIP = argv[1];
     
@@ -326,8 +319,8 @@ int main(int argc,char *argv[]){
         
         inet_ntop(res->ai_family,get_in_addr((struct sockaddr *)res->ai_addr),s,sizeof(s));
         gethostname(hostname,1023);
-        printf("Hostname : %s\n",hostname);
-        printf("Client connecting to : %s\n",s);
+        //printf("Hostname : %s\n",hostname);
+        //printf("Client connecting to : %s\n",s);
         
         //Initialize client
         initClient(sockfd,uploadp);
@@ -361,6 +354,7 @@ int main(int argc,char *argv[]){
                     printf("Enter the rfc id :");
                     scanf("%d",&id);
                     sendLookup(sockfd,id,uploadp);
+                    printf("\n");
                     break;
                     
                 //Get
@@ -368,9 +362,8 @@ int main(int argc,char *argv[]){
                     
                     printf("Enter the rfc id :");
                     scanf("%d",&id);
-                    
                     sendGet(sockfd,id,uploadp);
-                    
+                    printf("\n");
                     break;
                 
                 //Exit
@@ -402,8 +395,9 @@ int main(int argc,char *argv[]){
         memset(&getstruct,0,sizeof(getstruct));
         getstruct.ai_family = AF_UNSPEC;
         getstruct.ai_socktype = SOCK_STREAM;
+        getstruct.ai_socktype = AI_PASSIVE;
         
-        getaddrinfo("localhost",uploadp,&getstruct,&me);
+        getaddrinfo(NULL,uploadp,&getstruct,&me);
         
         if((newfd = socket(me->ai_family,me->ai_socktype,me->ai_protocol)) == -1){
             perror("Server:upload socket creation error");
@@ -436,14 +430,14 @@ int main(int argc,char *argv[]){
             n = recv(uploadfd,uploadbuf,MAXDATASIZE-1,0);
             uploadbuf[n] = '\0';
            
-            printf("Received %s:",uploadbuf);
+            //printf("Received %s:",uploadbuf);
             
             char *str,field[256],field1[256];
             int rfcid;
 
             str = strstr(uploadbuf,"GET");
             sscanf(str,"%s %s %d",field,field1,&rfcid);
-            printf("Rfcid: %d:",rfcid);
+            //printf("Rfcid: %d:",rfcid);
             
             char *ext=".txt";
             char filename[1024];
@@ -462,7 +456,7 @@ int main(int argc,char *argv[]){
             
             while ((ch = getc(file)) != EOF) {
                 tosend[0] = ch;
-                printf("%c",tosend[0]);
+                //printf("%c",tosend[0]);
                 if( (send(uploadfd,&tosend[0],1,0)) == -1){
                     perror("Upload send error");
                 }
@@ -471,7 +465,7 @@ int main(int argc,char *argv[]){
             fclose(file);
             
             close(uploadfd);
-            printf("End uploadserver\n");
+            //printf("End uploadserver\n");
         }
     }
     
