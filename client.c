@@ -107,7 +107,7 @@ char* reqHeader(int sockfd,int option,int rfcid,char* title,char* uploadport){
         strcat(fulltext,"Host: ");
         strcat(fulltext,hostname);
         
-        //printf("Sending %s\n",fulltext);
+        printf("Sending %s\n",fulltext);
         
     }
 	
@@ -140,7 +140,7 @@ int initClient(int sockfd,char *uploadportno){
         numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
         buf[numbytes] = '\0';
         
-        printf("%s\n",buf);
+        printf("Response from server : \n%s\n",buf);
     }
     
     fclose(fp);
@@ -165,15 +165,30 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     buf=(char *)malloc(MAXDATASIZE);
     numbytes = recv(serversockfd,buf,MAXDATASIZE-1,0);
     buf[numbytes] = '\0';
-    char *str;
-    char field[256],field1[256],hostname[256];
-    int portno;
     
-    str = strstr(buf,"\n");
+  	char *str;
+    char field[256],field1[256],hostname[256];
+    int portno,responsecode;
+    
+	//RFCID unavailable
+	str = strstr(buf,"P2P-CI/1.0");
+	sscanf(str,"%s %d",field,&responsecode);
+    
+	//printf("Response code:%d\n",responsecode);
+	
+	if(responsecode == 404){
+		printf("\nResponse from server : \n%s\n",buf);
+		return;
+  	}
+    
+	str = strstr(buf,"\n");
     //printf("%s\n",str);
     sscanf(str,"%s %s %s %d",field,field1,hostname,&portno);
     
     //printf("Hostname :%s, portno: %d",hostname,portno);
+    
+    char port_string[32];
+    sprintf(port_string,"%d",portno);
     
     //----End of lookup
     
@@ -181,84 +196,68 @@ int sendGet(int serversockfd,int rfcid,char *uploadportno){
     int getfilesocketfd;
     struct addrinfo getfilestruct,*getfileserver;
     
-    /*struct hostent* h;
-     h = gethostbyname(hostname);
-     
-     if( h == NULL){
-     printf("Unknown host\n");
-     }
-     
-     struct sockaddr_in server;
-     
-     memcpy(&server.sin_addr,h->h_addr_list[0], h->h_length);
-     server.sin_family= AF_INET;
-     server.sin_port = htons(portno);*/
+    memset(&getfilestruct,0,sizeof(getfilestruct));
+    getfilestruct.ai_family = AF_UNSPEC;
+    getfilestruct.ai_socktype = SOCK_STREAM;
     
-    char port_string[32];
-    sprintf(port_string,"%d",portno);
+    getaddrinfo(hostname,port_string,&getfilestruct,&getfileserver);
     
-    int status,sockfd;
-    struct addrinfo hints,*res,getstruct,*me;
-    
-    //Server details
-    memset(&hints,0,sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    
-    status = getaddrinfo(hostname,port_string,&hints,&res);
-    
-    if(status != 0){
-        perror("Getaddrinfo");
-        return;
+    if((getfilesocketfd = socket(getfileserver->ai_family,getfileserver->ai_socktype,getfileserver->ai_protocol)) == -1){
+        perror("Server:upload socket creation error");
     }
     
-    //Create a socket
-    if((getfilesocketfd = socket(res->ai_family,res->ai_socktype,res->ai_protocol)) == -1){
-        perror("Server:socket creating error");
-    }
-    
-    if(connect(getfilesocketfd,res->ai_addr,res->ai_addrlen) == -1){
-        close(sockfd);
-        perror("Client : Connect");
+    if(connect(getfilesocketfd,getfileserver->ai_addr,getfileserver->ai_addrlen) == -1){
+        close(getfilesocketfd);
+        perror("Get rfc client : Connect");
         exit(1);
     }
     
-    
     numbytes=-1;
     
-    char received[1];
+    buf=(char *)malloc(MAXDATASIZE);
+    memset(buf,'\0',sizeof(MAXDATASIZE));
     
     //printf("Get request for : %d\n",rfcid);
     reqHeader(getfilesocketfd,GET,rfcid,NULL,NULL);
     
     //Create a copy of the rfc
     FILE *file;
-    char *ext="(cpy).txt";
+    char *ext=".txt";
     char filename[1024];
     sprintf(filename,"%d%s",rfcid,ext);
     
     file = fopen(filename,"w");
     
-    char content[1024];
-    
     int bytesread = 0;
     
     while(numbytes != 0){
-        numbytes = recv(getfilesocketfd,received,1,0);
-        fprintf(file,"%c",received[0]);
+        numbytes = recv(getfilesocketfd,buf,MAXDATASIZE-1,0);
+        fprintf(file,"%s",buf);
+        memset(buf,'\0',sizeof(MAXDATASIZE));
         //bytesread += numbytes;
     }
     
     //buf[bytesread] = '\0';
-    close(getfilesocketfd);
+    
     fclose(file);
     
+    freeaddrinfo(getfileserver);
+    
+    close(getfilesocketfd);
+    
+    memset(buf,'\0',sizeof(MAXDATASIZE));
+    
     //ADD detail to server
-    reqHeader(serversockfd,ADD,rfcid,"title",uploadportno);
+    reqHeader(serversockfd,ADD,rfcid,field1,uploadportno);
+    
+    numbytes = recv(serversockfd,buf,MAXDATASIZE-1,0);
+    buf[numbytes] = '\0';
+    
+    printf("\nResponse from server : \n%s\n",buf);
     
 }
 
-char* sendLookup(int sockfd, int rfcid,char *uploadportno){
+void sendLookup(int sockfd, int rfcid,char *uploadportno){
     
     char* buf;
     int numbytes;
@@ -268,7 +267,8 @@ char* sendLookup(int sockfd, int rfcid,char *uploadportno){
     numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
     buf[numbytes] = '\0';
     
-    printf("%s\n",buf);
+    printf("\nResponse from server: \n%s\n",buf);
+    
 }
 
 int sendList(int sockfd,char* uploadportno){
@@ -281,22 +281,22 @@ int sendList(int sockfd,char* uploadportno){
     numbytes = recv(sockfd,buf,MAXDATASIZE-1,0);
     buf[numbytes] = '\0';
     
-    printf("%s\n",buf);
+    printf("\nResponse from server: \n%s\n",buf);
     
 }
 
 void sendExit(int sockfd){
     reqHeader(sockfd,EXIT,NULL,NULL,NULL);
-    //printf("End of exit\n");
+    printf("\nExit\n");
 }
 
 int main(int argc,char *argv[]){
     
-	char* PORTNO = "5556";
+    char* PORTNO = "5594";
     char* uploadp = argv[2];
-	char* SERVERIP = argv[1];
+    char* SERVERIP = argv[1];
     
-    printf("Serverip: %s, uploadport: %s\n",argv[1],argv[2]);
+    //printf("Serverip: %s, uploadport: %s\n",argv[1],argv[2]);
     
     pid_t pid = fork();
     
@@ -310,28 +310,7 @@ int main(int argc,char *argv[]){
         }
         
         hostname[511]='\0';
-        char localname[512];
-        
-        gethostname(localname,511);
-        int sx;
-        struct addrinfo hints1,*info,*p;
-        
-        memset(&hints1, 0, sizeof hints1);
-        hints1.ai_family = AF_UNSPEC; /*either IPV4 or IPV6*/
-        hints1.ai_socktype = SOCK_STREAM;
-        hints1.ai_flags = AI_CANONNAME;
-        
-        if ((sx = getaddrinfo(localname, "http", &hints1, &info)) != 0) {
-            //fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gai_result));
-            exit(1);
-        }
-        
-        //for(p = info; p != NULL; p = p->ai_next) {
-        printf("canonical hostname: %s\n", info->ai_canonname);
-        strcpy(hostname,info->ai_canonname);
-        //}
-        
-        freeaddrinfo(info);
+        gethostname(hostname,511);
         
         char *buf;
         int status,sockfd,numbytes;
@@ -347,7 +326,6 @@ int main(int argc,char *argv[]){
         
         getaddrinfo(SERVERIP,PORTNO,&hints,&res);
         
-        
         //Create a socket
         if((sockfd = socket(res->ai_family,res->ai_socktype,res->ai_protocol)) == -1){
             perror("Server:socket creating error");
@@ -359,9 +337,9 @@ int main(int argc,char *argv[]){
             exit(1);
         }
         
-        //inet_ntop(res->ai_family,get_in_addr((struct sockaddr *)res->ai_addr),s,sizeof(s));
-        //gethostname(hostname,1023);
-        printf("Hostname : %s\n",hostname);
+        inet_ntop(res->ai_family,get_in_addr((struct sockaddr *)res->ai_addr),s,sizeof(s));
+        gethostname(hostname,1023);
+        //printf("Hostname : %s\n",hostname);
         //printf("Client connecting to : %s\n",s);
         
         //Initialize client
@@ -396,16 +374,15 @@ int main(int argc,char *argv[]){
                     printf("Enter the rfc id :");
                     scanf("%d",&id);
                     sendLookup(sockfd,id,uploadp);
-                    printf("\n");
                     break;
                     
                     //Get
                 case 3:
-                    
                     printf("Enter the rfc id :");
                     scanf("%d",&id);
+                    
                     sendGet(sockfd,id,uploadp);
-                    printf("\n");
+                    
                     break;
                     
                     //Exit
@@ -437,7 +414,7 @@ int main(int argc,char *argv[]){
         memset(&getstruct,0,sizeof(getstruct));
         getstruct.ai_family = AF_UNSPEC;
         getstruct.ai_socktype = SOCK_STREAM;
-        getstruct.ai_socktype = AI_PASSIVE;
+        getstruct.ai_flags = AI_PASSIVE;
         
         getaddrinfo(NULL,uploadp,&getstruct,&me);
         
@@ -472,8 +449,6 @@ int main(int argc,char *argv[]){
             n = recv(uploadfd,uploadbuf,MAXDATASIZE-1,0);
             uploadbuf[n] = '\0';
             
-            //printf("Received %s:",uploadbuf);
-            
             char *str,field[256],field1[256];
             int rfcid;
             
@@ -507,7 +482,6 @@ int main(int argc,char *argv[]){
             fclose(file);
             
             close(uploadfd);
-            //printf("End uploadserver\n");
         }
     }
     

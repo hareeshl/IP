@@ -13,7 +13,7 @@
 #include<string.h>
 #include "list.h"
 
-#define PORTNO "5555"
+#define PORTNO "5594"
 #define MAXDATASIZE 1025
 
 char* command;
@@ -49,6 +49,12 @@ void addRFCDetail(int rfcid,char* rfctitle, char *hostname,int uploadportno){
 char* generateResponseHeader(){
     char* temp;
     temp= "P2P-CI/1.0 200 OK\n";
+    return temp;
+}
+
+char* generateUnavailableResponseHeader(){
+    char* temp;
+    temp= "P2P-CI/1.0 404 Not Found\n";
     return temp;
 }
 
@@ -228,11 +234,6 @@ int main(int argc,char *argv[]){
                         
                         int rfcid,uploadportno;
                         
-                        //printf("LOOKUP CALL\n");
-                        char *responseheader = generateResponseHeader();
-                        char response[4096]="";
-                        strcat(response,responseheader);
-                        
                         //Get rfcid
                         char *ch;
                         char field[256],field1[256];
@@ -242,6 +243,16 @@ int main(int argc,char *argv[]){
                         
                         rfcdetailnode* lookup;
                         lookup = getHostwithRFC(rfcid);
+                        char *responseheader,response[4096]="";
+                        
+                        //printf("LOOKUP CALL\n");
+                        if(lookup != NULL){
+                            responseheader = generateResponseHeader();
+                            strcat(response,responseheader);
+                        }else{
+                            responseheader = generateUnavailableResponseHeader();
+                            strcat(response,responseheader);
+                        }
                         
                         while(lookup != NULL){
                             
@@ -262,6 +273,9 @@ int main(int argc,char *argv[]){
                             
                             lookup = lookup->next;
                         }
+                        
+                        printf("Lookup unavailable\n");
+                        
                         strcat(response,"\0");
                         
                         //printf("Lookup response : %s\n",response);
